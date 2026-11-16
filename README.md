@@ -1,6 +1,6 @@
-# adult_lists
+# Adult Lists
 
-A plain-text list of adult website domains, for blocking at the network level with tools such as UniFi gateways and Pi-hole.
+A plain-text list of adult website domains, for either blocking at the network level with tools such as UniFi gateways and Pi-hole - or for redirecting traffic to these domains over a VPN.
 
 ## What's in here
 
