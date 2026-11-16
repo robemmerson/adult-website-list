@@ -6,7 +6,9 @@ A plain-text list of adult website domains, for either blocking at the network l
 
 | File | Description |
 | --- | --- |
-| `list.txt` | 13,173 domains, one per line, sorted, no comments or wildcards |
+| `list.txt` | Around 13,200 domains, one per line, sorted, no comments or wildcards |
+| `tools/domains.py` | Imports new domains into `list.txt` and checks the list is valid |
+| `tests/` | Unit tests for the tool |
 
 Each line is a bare hostname:
 
@@ -22,7 +24,7 @@ The list is derived from [emiliodallatorre/adult-hosts-list](https://github.com/
 
 ## What was changed
 
-UniFi rejects a list if it contains entries that aren't valid domain names, so the upstream list was cleaned. A dozen entries were removed and nothing was added:
+UniFi rejects a list if it contains entries that aren't valid domain names, so the upstream list was cleaned. A dozen entries were removed:
 
 | Removed entry | Reason |
 | --- | --- |
@@ -34,6 +36,33 @@ UniFi rejects a list if it contains entries that aren't valid domain names, so t
 | `free--webcams.com`, `magnetic--blue.tumblr.com`, `x--x--x.com`, `www.x--x--x.com`, `top.x--x--x.com` | Consecutive hyphens |
 
 Every remaining line contains only lowercase letters, digits, dots and hyphens, and there are no duplicates.
+
+Domains from other sources have since been added with the import tool below.
+
+## Adding domains
+
+`tools/domains.py` merges new domains into `list.txt`. It needs Python 3.9 or later and nothing else.
+
+```
+tools/domains.py import new-sites.txt --check-active
+tools/domains.py import https://example.org/some-blocklist.txt --dry-run
+tools/domains.py lint
+```
+
+A source can be a file, an `http(s)` URL, or `-` for stdin. Plain domain lists, hosts files, Adblock-style lists, dnsmasq configs and lists of URLs are all understood. Each entry is lower-cased, stripped of any scheme, path, port or trailing dot, then:
+
+1. **Validated against what UniFi accepts.** An entry is rejected if it is an IP address, contains an underscore or a double dash (`--`), ends in anything other than a letter or digit, or is otherwise not a well-formed domain. This also rejects internationalised (`xn--`) domains.
+2. **De-duplicated** against the rest of the input and against `list.txt`.
+3. **Given a `www.` form.** For each main domain in the input (`example.com`, `example.co.uk`), `www.example.com` is added too, even if the bare domain is already in the list. Subdomains such as `blog.example.com` are left alone. Use `--no-www` to turn this off.
+4. **Checked for activity**, with `--check-active`. A domain is kept only if it resolves in public DNS and something accepts a connection on port 443 or 80. Lookups go to Cloudflare's DNS-over-HTTPS service, so local DNS blocking doesn't affect the result.
+
+The survivors are merged into `list.txt` in sorted order. Rejected entries are printed with the reason; `--report FILE` writes all of them to a file, and `--dry-run` shows the outcome without changing the list.
+
+`lint` checks that `list.txt` is valid, sorted and free of duplicates. Run the tests with:
+
+```
+python3 -m unittest discover -s tests
+```
 
 ## Using the list
 
@@ -61,4 +90,4 @@ The format is a plain list of domains, which most DNS blockers (AdGuard Home, Te
 
 ## Contributing
 
-Open an issue or pull request to add or remove a domain. Keep entries to one valid hostname per line, lowercase, in sorted order.
+Open an issue or pull request to add or remove a domain. Add domains with `tools/domains.py import` so the list stays valid and sorted.
